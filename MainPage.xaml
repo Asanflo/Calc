@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:MauiCalculator.ViewModels"
+             x:Class="MauiCalculator.MainPage"
+             BackgroundColor="#000000"
+             Shell.NavBarIsVisible="False"
+             SizeChanged="OnPageSizeChanged">
+
+    <ContentPage.BindingContext>
+        <viewmodels:CalculatorViewModel />
+    </ContentPage.BindingContext>
+
+    <ContentPage.Resources>
+        <!-- Style des touches numériques (Gris foncé #333333 - circulaire) -->
+        <Style x:Key="NumberButtonStyle" TargetType="Button">
+            <Setter Property="BackgroundColor" Value="#333333" />
+            <Setter Property="TextColor" Value="#FFFFFF" />
+            <Setter Property="FontSize" Value="28" />
+            <Setter Property="FontAttributes" Value="None" />
+            <Setter Property="CornerRadius" Value="40" />
+            <Setter Property="HeightRequest" Value="75" />
+            <Setter Property="WidthRequest" Value="75" />
+            <Setter Property="Margin" Value="4" />
+        </Style>
+
+        <!-- Style des opérateurs (+, -, ×, ÷, =) (Orange vif #FF9F0A - circulaire) -->
+        <Style x:Key="OperatorButtonStyle" TargetType="Button">
+            <Setter Property="BackgroundColor" Value="#FF9F0A" />
+            <Setter Property="TextColor" Value="#FFFFFF" />
+            <Setter Property="FontSize" Value="32" />
+            <Setter Property="FontAttributes" Value="Bold" />
+            <Setter Property="CornerRadius" Value="40" />
+            <Setter Property="HeightRequest" Value="75" />
+            <Setter Property="WidthRequest" Value="75" />
+            <Setter Property="Margin" Value="4" />
+        </Style>
+
+        <!-- Style des actions (AC, +/-, %) (Gris clair #A5A5A5 - circulaire) -->
+        <Style x:Key="ActionButtonStyle" TargetType="Button">
+            <Setter Property="BackgroundColor" Value="#A5A5A5" />
+            <Setter Property="TextColor" Value="#000000" />
+            <Setter Property="FontSize" Value="24" />
+            <Setter Property="FontAttributes" Value="Bold" />
+            <Setter Property="CornerRadius" Value="40" />
+            <Setter Property="HeightRequest" Value="75" />
+            <Setter Property="WidthRequest" Value="75" />
+            <Setter Property="Margin" Value="4" />
+        </Style>
+
+        <!-- Style des fonctions scientifiques en paysage (Même forme circulaire #262628) -->
+        <Style x:Key="ScientificRoundButtonStyle" TargetType="Button">
+            <Setter Property="BackgroundColor" Value="#262628" />
+            <Setter Property="TextColor" Value="#FFFFFF" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontAttributes" Value="None" />
+            <Setter Property="CornerRadius" Value="30" />
+            <Setter Property="HeightRequest" Value="56" />
+            <Setter Property="WidthRequest" Value="56" />
+            <Setter Property="Margin" Value="2" />
+        </Style>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,*,Auto" Padding="16,20,16,16" BackgroundColor="#000000">
+
+        <!-- Barre Supérieure : Menu Hamburger & Indicateur DEG / RAD -->
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*,Auto" VerticalOptions="Center">
+
+            <!-- Bouton Menu Hamburger -->
+            <Button Grid.Column="0"
+                    Text="☰"
+                    Command="{Binding ToggleMenuCommand}"
+                    BackgroundColor="Transparent"
+                    TextColor="#FFFFFF"
+                    FontSize="22"
+                    HeightRequest="40"
+                    WidthRequest="40"
+                    Padding="0" />
+
+            <!-- Bouton & Badge DEG / RAD au niveau du menu -->
+            <Button Grid.Column="1"
+                    Text="{Binding AngleModeText}"
+                    Command="{Binding ToggleAngleModeCommand}"
+                    BackgroundColor="#222222"
+                    TextColor="#FF9F0A"
+                    FontAttributes="Bold"
+                    CornerRadius="10"
+                    HeightRequest="32"
+                    FontSize="12"
+                    Margin="8,0,0,0"
+                    Padding="10,0" />
+
+            <!-- Bouton Effacer dernier caractère (Backspace) -->
+            <Button Grid.Column="3"
+                    Text="⌫"
+                    Command="{Binding DeleteLastCharCommand}"
+                    BackgroundColor="Transparent"
+                    TextColor="#8E8E93"
+                    FontSize="22"
+                    HeightRequest="40"
+                    WidthRequest="40"
+                    Padding="0" />
+        </Grid>
+
+        <!-- Zone d'Affichage Réactive (Opération en cours au-dessus du Résultat) -->
+        <VerticalStackLayout Grid.Row="1" VerticalOptions="End" HorizontalOptions="Fill" Spacing="4" Margin="0,0,8,12">
+
+            <!-- Opération en cours au-dessus du résultat -->
+            <Label Text="{Binding CurrentOperationExpression}"
+                   FontSize="22"
+                   TextColor="#8E8E93"
+                   HorizontalTextAlignment="End"
+                   LineBreakMode="HeadTruncation" />
+
+            <!-- Grand Résultat dynamique -->
+            <Label Text="{Binding DisplayText}"
+                   FontSize="{Binding ResultFontSize}"
+                   FontAttributes="None"
+                   TextColor="{Binding DisplayTextColor}"
+                   HorizontalTextAlignment="End"
+                   LineBreakMode="TailTruncation"
+                   MaxLines="1" />
+
+            <!-- Alerte explicite si division par zéro sans crash -->
+            <Label Text="{Binding ErrorMessage}"
+                   IsVisible="{Binding HasError}"
+                   TextColor="#FF453A"
+                   FontSize="14"
+                   FontAttributes="Bold"
+                   HorizontalTextAlignment="End" />
+        </VerticalStackLayout>
+
+        <!-- ======================================================== -->
+        <!-- CLAVIER EN MODE PORTRAIT (4 Colonnes x 5 Lignes standard) -->
+        <!-- ======================================================== -->
+        <Grid x:Name="PortraitKeypad"
+              Grid.Row="2"
+              IsVisible="{Binding IsPortrait}"
+              RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+              ColumnDefinitions="*,*,*,*"
+              HorizontalOptions="Center"
+              VerticalOptions="End">
+
+            <!-- Ligne 1 : AC, +/-, %, ÷ -->
+            <Button Grid.Row="0" Grid.Column="0" Text="{Binding ClearButtonText}" Command="{Binding ClearCommand}" Style="{StaticResource ActionButtonStyle}" />
+            <Button Grid.Row="0" Grid.Column="1" Text="+/-" Command="{Binding ToggleSignCommand}" Style="{StaticResource ActionButtonStyle}" />
+            <Button Grid.Row="0" Grid.Column="2" Text="%" Command="{Binding PercentageCommand}" Style="{StaticResource ActionButtonStyle}" />
+            <Button Grid.Row="0" Grid.Column="3" Text="÷" Command="{Binding OperatorCommand}" CommandParameter="÷" Style="{StaticResource OperatorButtonStyle}" />
+
+            <!-- Ligne 2 : 7, 8, 9, × -->
+            <Button Grid.Row="1" Grid.Column="0" Text="7" Command="{Binding DigitCommand}" CommandParameter="7" Style="{StaticResource NumberButtonStyle}" />
+            <Button Grid.Row="1" Grid.Column="1" Text="8" Command="{Binding DigitCommand}" CommandParameter="8" Style="{StaticResource NumberButtonStyle}" />
+            <Button Grid.Row="1" Grid.Column="2" Text="9" Command="{Binding DigitCommand}" CommandParameter="9" Style="{StaticResource NumberButtonStyle}" />
+            <Button Grid.Row="1" Grid.Column="3" Text="×" Command="{Binding OperatorCommand}" CommandParameter="×" Style="{StaticResource OperatorButtonStyle}" />
+
+            <!-- Ligne 3 : 4, 5, 6, - -->
+            <Button Grid.Row="2" Grid.Column="0" Text="4" Command="{Binding DigitCommand}" CommandParameter="4" Style="{StaticResource NumberButtonStyle}" />
+            <Button Grid.Row="2" Grid.Column="1" Text="5" Command="{Binding DigitCommand}" CommandParameter="5" Style="{StaticResource NumberButtonStyle}" />
+            <Button Grid.Row="2" Grid.Column="2" Text="6" Command="{Binding DigitCommand}" CommandParameter="6" Style="{StaticResource NumberButtonStyle}" />
+            <Button Grid.Row="2" Grid.Column="3" Text="-" Command="{Binding OperatorCommand}" CommandParameter="-" Style="{StaticResource OperatorButtonStyle}" />
+
+            <!-- Ligne 4 : 1, 2, 3, + -->
+            <Button Grid.Row="3" Grid.Column="0" Text="1" Command="{Binding DigitCommand}" CommandParameter="1" Style="{StaticResource NumberButtonStyle}" />
+            <Button Grid.Row="3" Grid.Column="1" Text="2" Command="{Binding DigitCommand}" CommandParameter="2" Style="{StaticResource NumberButtonStyle}" />
+            <Button Grid.Row="3" Grid.Column="2" Text="3" Command="{Binding DigitCommand}" CommandParameter="3" Style="{StaticResource NumberButtonStyle}" />
+            <Button Grid.Row="3" Grid.Column="3" Text="+" Command="{Binding OperatorCommand}" CommandParameter="+" Style="{StaticResource OperatorButtonStyle}" />
+
+            <!-- Ligne 5 : 0 (Capsule), ., = -->
+            <Button Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
+                    Text="0"
+                    Command="{Binding DigitCommand}" CommandParameter="0"
+                    BackgroundColor="#333333"
+                    TextColor="#FFFFFF"
+                    FontSize="28"
+                    CornerRadius="40"
+                    HeightRequest="75"
+                    HorizontalOptions="Fill"
+                    Margin="4"
+                    Padding="30,0,0,0" />
+
+            <Button Grid.Row="4" Grid.Column="2" Text="." Command="{Binding DecimalCommand}" Style="{StaticResource NumberButtonStyle}" />
+            <Button Grid.Row="4" Grid.Column="3" Text="=" Command="{Binding CalculateCommand}" Style="{StaticResource OperatorButtonStyle}" />
+        </Grid>
+
+        <!-- ========================================================================= -->
+        <!-- CLAVIER EN MODE PAYSAGE (Calculatrice Scientifique - Touches Rondes 10x5) -->
+        <!-- ========================================================================= -->
+        <Grid x:Name="LandscapeKeypad"
+              Grid.Row="2"
+              IsVisible="{Binding IsLandscape}"
+              RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+              ColumnDefinitions="*,*,*,*,*,*,*,*,*,*"
+              HorizontalOptions="Center"
+              VerticalOptions="End">
+
+            <!-- Ligne 1 : (, ), mc, m+, m-, mr, AC, +/-, %, ÷ -->
+            <Button Grid.Row="0" Grid.Column="0" Text="(" Command="{Binding ScientificCommand}" CommandParameter="(" Style="{StaticResource ScientificRoundButtonStyle}" />
+            <Button Grid.Row="0" Grid.Column="1" Text=")" Command="{Binding ScientificCommand}" CommandParameter=")" Style="{StaticResource ScientificRoundButtonStyle}" />
+            <Button Grid.Row="0" Grid.Column="2" Text="mc" Command="{Binding MemoryCommand}" CommandParameter="MC" Style="{StaticResource ScientificRoundButtonStyle}" />
+            <Button Grid.Row="0" Grid.Column="3" Text="m+" Command="{Binding MemoryCommand}" CommandParameter="M+" Style="{StaticResource ScientificRoundButtonStyle}" />
+            <Button Grid.Row="0" Grid.Column="4" Text="m-" Command="{Binding MemoryCommand}" CommandParameter="M-" Style="{StaticResource ScientificRoundButtonStyle}" />
+            <Button Grid.Row="0" Grid.Column="5" Text="mr" Command="{Binding MemoryCommand}" CommandParameter="MR" Style="{StaticResource ScientificRoundButtonStyle}" />
+            <Button Grid.Row="0" Grid.Column="6" Text="{Binding ClearButtonText}" Command="{Binding ClearCommand}" Style="{StaticResource ActionButtonStyle}" HeightRequest="56" WidthRequest="56" CornerRadius="28" FontSize="18" />
+            <Button Grid.Row="0" Grid.Column="7" Text="+/-" Command="{Binding ToggleSignCommand}" Style="{StaticResource ActionButtonStyle}" HeightRequest="56" WidthRequest="56" CornerRadius="28" FontSize="18" />
+            <Button Grid.Row="0" Grid.Column="8" Text="%" Command="{Binding PercentageCommand}" Style="{StaticResource ActionButtonStyle}" HeightRequest="56" WidthRequest="56" CornerRadius="28" FontSize="18" />
+            <Button Grid.Row="0" Grid.Column="9" Text="÷" Command="{Binding OperatorCommand}" CommandParameter="÷" Style="{StaticResource OperatorButtonStyle}" HeightRequest="56" WidthRequest="56" CornerRadius="28" FontSize="22" />
+
+            <!-- Ligne 2 : 2nd, x², xʸ, eˣ, 10ˣ, 1/x, 7, 8, 9, × -->
+            <Button Grid.Row="1" Grid.Column="0" Text="2ⁿᵈ" Command="{Binding ToggleSecondModeCommand}" Style="{StaticResource ScientificRoundButtonStyle}" />
+            <Button Grid.Row="1" Grid.Column="1" Text="x²" Command="{Binding ScientificCommand}" CommandParameter="x²" Style="{StaticResource ScientificRoundButtonStyle}" />
+            <Button Grid.Row="1" Grid.Column="2" Text="xʸ" Command="{Binding OperatorCommand}" CommandParameter="xʸ" Style="{StaticResource ScientificRoundButtonStyle}" />
+            <Button Grid.Row="1" Grid.Column="3" Text="eˣ" Command="{Binding ScientificCommand}" CommandParameter="eˣ" Style="{StaticResource ScientificRoundButtonStyle}" />
+            <Button Grid.Row="1" Grid.Column="4" Text="10ˣ" Command="{Binding ScientificCommand}" CommandParameter="10ˣ" Style="{StaticResource ScientificRoundButtonStyle}" />
+            <Button Grid.Row="1" Grid.Column="5" Text="¹/x" Command="{Binding ScientificCommand}" CommandParameter="1/x" Style="{StaticResource ScientificRoundButtonStyle}" />
+            <Button Grid.Row="1" Grid.Column="6" Text="7" Command="{Binding DigitCommand}" CommandParameter="7" Style="{StaticResource NumberButtonStyle}" HeightRequest="56" WidthRequest="56" CornerRadius="28" FontSize="20" />
+            <Button Grid.Row="1" Grid.Column="7" Text="8" Command="{Binding DigitCommand}" CommandParameter="8" Style="{StaticResource NumberButtonStyle}" HeightRequest="56" WidthRequest="56" CornerRadius="28" FontSize="20" />
+            <Button Grid.Row="1" Grid.Column="8" Text="9" Command="{Binding DigitCommand}" CommandParameter="9" Style="{StaticResource NumberButtonStyle}" HeightRequest="56" WidthRequest="56" CornerRadius="28" FontSize="20" />
+            <Button Grid.Row="1" Grid.Column="9" Text="×" Command="{Binding OperatorCommand}" CommandParameter="×" Style="{StaticResource OperatorButtonStyle}" HeightRequest="56" WidthRequest="56" CornerRadius="28" FontSize="22" />
+
+            <!-- Ligne 3 : √x, ln, log10, sin, cos, tan, 4, 5, 6, - -->
+            <Button Grid.Row="2" Grid.Column="0" Text="√x" Command="{Binding ScientificCommand}" CommandParameter="sqrt" Style="{StaticResource ScientificRoundButtonStyle}" />
+            <Button Grid.Row="2" Grid.Column="1" Text="ln" Command="{Binding ScientificCommand}" CommandParameter="ln" Style="{StaticResource ScientificRoundButtonStyle}" />
+            <Button Grid.Row="2" Grid.Column="2" Text="log" Command="{Binding ScientificCommand}" CommandParameter="log" Style="{StaticResource ScientificRoundButtonStyle}" />
+            <Button Grid.Row="2" Grid.Column="3" Text="sin" Command="{Binding ScientificCommand}" CommandParameter="sin" Style="{StaticResource ScientificRoundButtonStyle}" />
+            <Button Grid.Row="2" Grid.Column="4" Text="cos" Command="{Binding ScientificCommand}" CommandParameter="cos" Style="{StaticResource ScientificRoundButtonStyle}" />
+            <Button Grid.Row="2" Grid.Column="5" Text="tan" Command="{Binding ScientificCommand}" CommandParameter="tan" Style="{StaticResource ScientificRoundButtonStyle}" />
+            <Button Grid.Row="2" Grid.Column="6" Text="4" Command="{Binding DigitCommand}" CommandParameter="4" Style="{StaticResource NumberButtonStyle}" HeightRequest="56" WidthRequest="56" CornerRadius="28" FontSize="20" />
+            <Button Grid.Row="2" Grid.Column="7" Text="5" Command="{Binding DigitCommand}" CommandParameter="5" Style="{StaticResource NumberButtonStyle}" HeightRequest="56" WidthRequest="56" CornerRadius="28" FontSize="20" />
+            <Button Grid.Row="2" Grid.Column="8" Text="6" Command="{Binding DigitCommand}" CommandParameter="6" Style="{StaticResource NumberButtonStyle}" HeightRequest="56" WidthRequest="56" CornerRadius="28" FontSize="20" />
+            <Button Grid.Row="2" Grid.Column="9" Text="-" Command="{Binding OperatorCommand}" CommandParameter="-" Style="{StaticResource OperatorButtonStyle}" HeightRequest="56" WidthRequest="56" CornerRadius="28" FontSize="22" />
+
+            <!-- Ligne 4 : e, sinh, cosh, tanh, π, n!, 1, 2, 3, + -->
+            <Button Grid.Row="3" Grid.Column="0" Text="e" Command="{Binding InsertConstantCommand}" CommandParameter="e" Style="{StaticResource ScientificRoundButtonStyle}" />
+            <Button Grid.Row="3" Grid.Column="1" Text="sinh" Command="{Binding ScientificCommand}" CommandParameter="sinh" Style="{StaticResource ScientificRoundButtonStyle}" />
+            <Button Grid.Row="3" Grid.Column="2" Text="cosh" Command="{Binding ScientificCommand}" CommandParameter="cosh" Style="{StaticResource ScientificRoundButtonStyle}" />
+            <Button Grid.Row="3" Grid.Column="3" Text="tanh" Command="{Binding ScientificCommand}" CommandParameter="tanh" Style="{StaticResource ScientificRoundButtonStyle}" />
+            <Button Grid.Row="3" Grid.Column="4" Text="π" Command="{Binding InsertConstantCommand}" CommandParameter="pi" Style="{StaticResource ScientificRoundButtonStyle}" />
+            <Button Grid.Row="3" Grid.Column="5" Text="n!" Command="{Binding ScientificCommand}" CommandParameter="n!" Style="{StaticResource ScientificRoundButtonStyle}" />
+            <Button Grid.Row="3" Grid.Column="6" Text="1" Command="{Binding DigitCommand}" CommandParameter="1" Style="{StaticResource NumberButtonStyle}" HeightRequest="56" WidthRequest="56" CornerRadius="28" FontSize="20" />
+            <Button Grid.Row="3" Grid.Column="7" Text="2" Command="{Binding DigitCommand}" CommandParameter="2" Style="{StaticResource NumberButtonStyle}" HeightRequest="56" WidthRequest="56" CornerRadius="28" FontSize="20" />
+            <Button Grid.Row="3" Grid.Column="8" Text="3" Command="{Binding DigitCommand}" CommandParameter="3" Style="{StaticResource NumberButtonStyle}" HeightRequest="56" WidthRequest="56" CornerRadius="28" FontSize="20" />
+            <Button Grid.Row="3" Grid.Column="9" Text="+" Command="{Binding OperatorCommand}" CommandParameter="+" Style="{StaticResource OperatorButtonStyle}" HeightRequest="56" WidthRequest="56" CornerRadius="28" FontSize="22" />
+
+            <!-- Ligne 5 : Rad/Deg, φ, ʸ√x, EE, Rand, 0, ., = -->
+            <Button Grid.Row="4" Grid.Column="0" Text="{Binding AngleModeText}" Command="{Binding ToggleAngleModeCommand}" Style="{StaticResource ScientificRoundButtonStyle}" TextColor="#FF9F0A" />
+            <Button Grid.Row="4" Grid.Column="1" Text="φ" Command="{Binding InsertConstantCommand}" CommandParameter="phi" Style="{StaticResource ScientificRoundButtonStyle}" />
+            <Button Grid.Row="4" Grid.Column="2" Text="ʸ√x" Command="{Binding OperatorCommand}" CommandParameter="ʸ√x" Style="{StaticResource ScientificRoundButtonStyle}" />
+            <Button Grid.Row="4" Grid.Column="3" Text="EE" Command="{Binding DigitCommand}" CommandParameter="e" Style="{StaticResource ScientificRoundButtonStyle}" />
+            <Button Grid.Row="4" Grid.Column="4" Text="Rand" Command="{Binding RandomCommand}" Style="{StaticResource ScientificRoundButtonStyle}" />
+            <Button Grid.Row="4" Grid.Column="5" Grid.ColumnSpan="2" Text="0" Command="{Binding DigitCommand}" CommandParameter="0" Style="{StaticResource NumberButtonStyle}" HeightRequest="56" CornerRadius="28" FontSize="20" HorizontalOptions="Fill" />
+            <Button Grid.Row="4" Grid.Column="7" Text="." Command="{Binding DecimalCommand}" Style="{StaticResource NumberButtonStyle}" HeightRequest="56" WidthRequest="56" CornerRadius="28" FontSize="20" />
+            <Button Grid.Row="4" Grid.Column="8" Grid.ColumnSpan="2" Text="=" Command="{Binding CalculateCommand}" Style="{StaticResource OperatorButtonStyle}" HeightRequest="56" CornerRadius="28" FontSize="22" HorizontalOptions="Fill" />
+        </Grid>
+    </Grid>
+</ContentPage>
